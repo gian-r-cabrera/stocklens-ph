@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { NotebookPen } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,7 +20,11 @@ export function JournalEmpty() {
           Log a signal from any stock&apos;s detail page to start tracking it here.
         </CardDescription>
       </CardHeader>
-      <CardContent />
+      <CardContent className="flex justify-center pb-8">
+        <Link href="/stocks">
+          <Button>Browse stocks</Button>
+        </Link>
+      </CardContent>
     </Card>
   );
 }
