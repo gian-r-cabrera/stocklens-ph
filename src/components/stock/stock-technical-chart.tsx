@@ -16,7 +16,7 @@ import { useIsClient } from "@/lib/hooks/use-is-client";
 import { formatStockChartTick } from "@/lib/market/chart-domain";
 import type { IndicatorPoint } from "@/lib/market/indicators";
 
-export type TechnicalPanelKey = "price" | "volume" | "rsi" | "macd";
+export type TechnicalPanelKey = "price" | "volume" | "rsi" | "macd" | "atr";
 
 // forecastPoints (analysis.chartData) keys its dates as short labels like
 // "Jul 24"; indicator points from the API use ISO dates ("2026-07-24") —
@@ -32,6 +32,7 @@ export const ALL_TECHNICAL_PANELS: ReadonlySet<TechnicalPanelKey> = new Set([
   "volume",
   "rsi",
   "macd",
+  "atr",
 ]);
 
 type StockTechnicalChartProps = {
@@ -39,6 +40,8 @@ type StockTechnicalChartProps = {
   isIndex?: boolean;
   forecastPoints?: Array<{ date: string; forecast: number | null }>;
   visiblePanels?: ReadonlySet<TechnicalPanelKey>;
+  support?: { price: number } | null;
+  resistance?: { price: number } | null;
 };
 
 function Panel({
@@ -65,6 +68,8 @@ export function StockTechnicalChart({
   isIndex = false,
   forecastPoints = [],
   visiblePanels = ALL_TECHNICAL_PANELS,
+  support = null,
+  resistance = null,
 }: StockTechnicalChartProps) {
   const mounted = useIsClient();
 
@@ -114,6 +119,9 @@ export function StockTechnicalChart({
   const macdData = points
     .filter((p) => p.macd != null)
     .map((p) => ({ ...p, date: formatBarDate(p.date) }));
+  const atrData = points
+    .filter((p) => p.atr14 != null)
+    .map((p) => ({ ...p, date: formatBarDate(p.date) }));
 
   return (
     <div className="space-y-6" role="img" aria-label="Technical analysis chart">
@@ -136,6 +144,22 @@ export function StockTechnicalChart({
                 tickFormatter={(v) => formatStockChartTick(Number(v), { isIndex })}
               />
               <Tooltip />
+              {support ? (
+                <ReferenceLine
+                  y={support.price}
+                  stroke="var(--trend-up)"
+                  strokeDasharray="3 3"
+                  label={{ value: "Support", position: "insideBottomLeft", fontSize: 10 }}
+                />
+              ) : null}
+              {resistance ? (
+                <ReferenceLine
+                  y={resistance.price}
+                  stroke="var(--trend-down)"
+                  strokeDasharray="3 3"
+                  label={{ value: "Resistance", position: "insideTopRight", fontSize: 10 }}
+                />
+              ) : null}
               <Line type="monotone" dataKey="close" stroke="var(--chart-1)" dot={false} name="Close" />
               <Line type="monotone" dataKey="sma20" stroke="var(--chart-2)" dot={false} name="SMA 20" />
               <Line type="monotone" dataKey="sma50" stroke="var(--chart-3)" dot={false} name="SMA 50" />
@@ -214,6 +238,25 @@ export function StockTechnicalChart({
                 dot={false}
                 name="Signal"
               />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </Panel>
+      ) : null}
+
+      {visiblePanels.has("atr") ? (
+        <Panel title="ATR (14)" height={120}>
+          <ResponsiveContainer
+            width="100%"
+            height="100%"
+            minWidth={0}
+            initialDimension={{ width: 400, height: 120 }}
+          >
+            <ComposedChart data={atrData}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="date" hide />
+              <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} />
+              <Tooltip />
+              <Line type="monotone" dataKey="atr14" stroke="var(--chart-1)" dot={false} name="ATR" />
             </ComposedChart>
           </ResponsiveContainer>
         </Panel>

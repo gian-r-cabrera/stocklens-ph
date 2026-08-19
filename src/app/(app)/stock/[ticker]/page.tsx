@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
 
 import { PageShell } from "@/components/layout/page-shell";
+import { StockCompanyStats } from "@/components/stock/stock-company-stats";
 import { StockDetailTabs } from "@/components/stock/stock-detail-tabs";
+import { StockFundamentals } from "@/components/stock/stock-fundamentals";
 import { StockHeader } from "@/components/stock/stock-header";
 import { StockMetrics } from "@/components/stock/stock-metrics";
+import { StockSignalCard } from "@/components/stock/stock-signal-card";
 import { pathToTicker } from "@/lib/forecast";
 import { isAnalyzedTicker, getPseCompanyByTicker } from "@/lib/pse/universe";
 import { getStockAnalysis } from "@/lib/services/stock-service";
@@ -37,6 +40,9 @@ export default async function StockPage({ params }: StockPageProps) {
     <PageShell>
       <StockHeader analysis={analysis} />
       <StockMetrics analysis={analysis} />
+      <StockCompanyStats analysis={analysis} />
+      <StockFundamentals analysis={analysis} />
+      <StockSignalCard analysis={analysis} />
       <StockDetailTabs analysis={analysis} showNarrative={showNarrative} />
     </PageShell>
   );

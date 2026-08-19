@@ -38,10 +38,35 @@ function formatEdgeDate(d: Date): string {
   return `${mm}-${dd}-${yyyy}`;
 }
 
+const MONTH_NUMBERS: Record<string, string> = {
+  Jan: "01",
+  Feb: "02",
+  Mar: "03",
+  Apr: "04",
+  May: "05",
+  Jun: "06",
+  Jul: "07",
+  Aug: "08",
+  Sep: "09",
+  Oct: "10",
+  Nov: "11",
+  Dec: "12",
+};
+
+/** CHART_DATE arrives as "Aug 14, 2026 00:00:00" — no timezone marker, so
+ * `new Date(raw)` parses it in the *runtime's local* timezone, then
+ * `.toISOString()` (UTC-based) can shift the date backward a day in any
+ * timezone at or ahead of UTC (confirmed live: "Aug 14" became "Aug 13" on
+ * a UTC+8 machine — the kind of environment a PH-based dev running this
+ * script locally would actually be in). Explicit string parsing sidesteps
+ * the runtime timezone entirely, same technique as
+ * pse-edge-fundamentals.ts's parseFilingDate. */
 function parseChartDate(raw: string): string | null {
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString().slice(0, 10);
+  const match = raw.trim().match(/^([A-Za-z]{3})\w*\s+(\d{1,2}),\s*(\d{4})/);
+  if (!match) return null;
+  const month = MONTH_NUMBERS[match[1]!];
+  if (!month) return null;
+  return `${match[3]}-${month}-${match[2]!.padStart(2, "0")}`;
 }
 
 export async function fetchPseEdgeSecurityId(

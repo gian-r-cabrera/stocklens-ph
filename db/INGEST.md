@@ -27,13 +27,52 @@ npm run prisma:migrate
 npm run prisma:generate
 ```
 
-Tables: `market_quotes_latest`, `market_bars_daily`, `market_forecasts_latest`, `market_model_metrics`, `rate_limits`.
+Tables: `market_quotes_latest`, `market_bars_daily`, `market_forecasts_latest`, `market_model_metrics`, `rate_limits`, `company_stats_latest`, `fundamentals_latest`.
 
 Apply forecast tables if migrating manually:
 
 ```bash
 psql "$DATABASE_URL" -f db/migrations/002_forecast_tables.sql
 ```
+
+Apply company stats table if migrating manually:
+
+```bash
+psql "$DATABASE_URL" -f db/migrations/004_company_stats.sql
+```
+
+`company_stats_latest` (market cap, shares outstanding, free float, foreign
+ownership limit, par value — from PSE EDGE's `stockdataList`, not P/E-style
+fundamentals) is a manual/occasional ingest, not a scheduled cron — this
+data moves slowly. Run `npm run ingest:company-stats` whenever you want
+fresher numbers.
+
+Apply fundamentals table if migrating manually:
+
+```bash
+psql "$DATABASE_URL" -f db/migrations/005_fundamentals.sql
+```
+
+`fundamentals_latest` (Total Assets/Liabilities, Stockholders' Equity, Book
+Value/Share, Revenue and Net Income YTD, EPS trailing-12mo basic/diluted —
+real P/E-capable fundamentals) is parsed from the latest SEC Form 17-Q
+quarterly-report cover sheet, which PSE EDGE renders as structured HTML
+(see `scripts/market/pse-edge-fundamentals.ts` — not PDF extraction).
+Manual/occasional ingest, not a cron — quarterly filings don't need one,
+and it's a 3-4-request-per-company chain. Run `npm run ingest:fundamentals`
+whenever you want fresher numbers.
+
+Add the dividends column if migrating manually (already part of
+`fundamentals_latest`, just a later ALTER TABLE):
+
+```bash
+psql "$DATABASE_URL" -f db/migrations/006_dividends.sql
+```
+
+Trailing-12-month cash dividend per share (COMMON/Cash rows only, from PSE
+EDGE's Dividends and Rights page) is fetched concurrently with the
+quarterly cover-sheet chain during the same `ingest:fundamentals` run —
+no separate command.
 
 ---
 

@@ -8,12 +8,21 @@ import { horizonToDays } from "@/lib/forecast/horizon";
 import { bestModelMetrics } from "@/lib/forecast/backtest";
 import type { ForecastModel } from "@/lib/forecast/types";
 import { weekRangeFromBars } from "@/lib/market/bars-repository";
+import { getCompanyStats } from "@/lib/market/company-stats-repository";
+import { getFundamentals } from "@/lib/market/fundamentals-repository";
 import { stockChartYAxisDomain } from "@/lib/market/chart-domain";
+import { computeIndicators, computeSupportResistance } from "@/lib/market/indicators";
 import {
   formatAsOf,
   formatPriceAmount,
   quoteToDisplay,
 } from "@/lib/market/format-quote";
+import {
+  SIGNAL_HORIZON_DAYS,
+  computeTickerSignal,
+  consensusTargetPrice,
+} from "@/lib/signal/consensus";
+import { computeEntryExitPlan } from "@/lib/signal/entry-exit";
 import {
   getForecastFromSnapshot,
   getMetricsFromSnapshot,
@@ -145,6 +154,10 @@ function catalogTemplate(ticker: string): StockAnalysis {
       directionalAccuracy: "—",
     },
     modelComparison: [],
+    signal: null,
+    entryExitPlan: null,
+    companyStats: null,
+    fundamentals: null,
     aiInsight: {
       summary: `${name} is listed on the Philippine Stock Exchange. Forecasts use walk-forward backtests on daily OHLCV when bar history is available.`,
       caution:
@@ -275,6 +288,34 @@ export async function buildMarketAnalysis(
   }
 
   const storedMetrics = await loadMetrics(symbol, normalized, horizonDays);
+
+  // The signal uses a fixed horizon so it doesn't jump when the user toggles
+  // the forecast chart's horizon dropdown; reuse storedMetrics when the page
+  // already asked for that horizon, otherwise fetch it separately (cached).
+  const signalMetrics =
+    horizonDays === SIGNAL_HORIZON_DAYS
+      ? storedMetrics
+      : await loadMetrics(symbol, normalized, SIGNAL_HORIZON_DAYS);
+  const signal = computeTickerSignal(bars, signalMetrics, SIGNAL_HORIZON_DAYS);
+  const atr14 = computeIndicators(bars).at(-1)?.atr14 ?? null;
+  const { support, resistance } = computeSupportResistance(bars);
+  const entryExitPlan =
+    isIndex || !signal.dataSufficient
+      ? null
+      : computeEntryExitPlan(
+          signal.action,
+          lastPrice,
+          atr14,
+          support,
+          resistance,
+          consensusTargetPrice(signal.votes),
+        );
+
+  // No market-cap/shares-outstanding concept for an index.
+  const companyStats = isIndex ? null : (await getCompanyStats([normalized])).get(symbol) ?? null;
+  // No quarterly filer for an index either.
+  const fundamentals = isIndex ? null : (await getFundamentals([normalized])).get(symbol) ?? null;
+
   const best = bestModelMetrics(storedMetrics);
   const performance = best
     ? metricsToPerformance(best)
@@ -323,6 +364,10 @@ export async function buildMarketAnalysis(
     trend,
     performance,
     modelComparison,
+    signal: isIndex ? null : signal,
+    entryExitPlan,
+    companyStats,
+    fundamentals,
     aiInsight,
     marketContext,
     lastUpdated,

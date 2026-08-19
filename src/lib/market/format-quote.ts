@@ -19,6 +19,17 @@ export function formatPriceAmount(amount: number, isIndex = false): string {
   return `₱${amount.toFixed(2)}`;
 }
 
+/** Inverse of formatPriceAmount — strips the peso sign/grouping commas
+ * this codebase's own formatter always produces, for callers that only
+ * have a pre-formatted display string (e.g. StockAnalysis.metrics.lastClose)
+ * but need a numeric value to compute against. Returns null for the "—"
+ * placeholder or anything else that doesn't parse to a real number. */
+export function parsePriceAmount(formatted: string): number | null {
+  if (formatted === "—") return null;
+  const n = Number.parseFloat(formatted.replace(/[₱,\s]/g, ""));
+  return Number.isNaN(n) ? null : n;
+}
+
 export function formatVolumeAmount(volume: number | null): string {
   if (volume == null || volume <= 0) return "—";
   if (volume >= 1_000_000) return `${(volume / 1_000_000).toFixed(1)}M`;

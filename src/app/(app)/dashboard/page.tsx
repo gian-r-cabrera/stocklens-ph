@@ -4,6 +4,7 @@ import { MarketOverview } from "@/components/dashboard/market-overview";
 import { PseiChart } from "@/components/dashboard/psei-chart-lazy";
 import { RecentAnalysisTable } from "@/components/dashboard/recent-analysis-table";
 import { StockSearch } from "@/components/dashboard/stock-search";
+import { WhatsNewCard } from "@/components/dashboard/whats-new-card";
 import { isDbMarketEnabled } from "@/lib/db/config";
 import { APP_PAGE_CLASS } from "@/lib/layout";
 import { getMarketOverview } from "@/lib/services/market-service";
@@ -15,6 +16,7 @@ export default async function DashboardPage() {
   return (
     <div className={APP_PAGE_CLASS}>
       <StockSearch />
+      <WhatsNewCard />
       {market.dbUnreachable ? (
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
           Database unreachable — showing static snapshot. Fix{" "}

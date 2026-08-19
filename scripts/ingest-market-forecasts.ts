@@ -65,6 +65,18 @@ async function mapPool<T, R>(
   return results;
 }
 
+/** Same fix as src/lib/market/bars-repository.ts's dateOnlyToIso — see that
+ * file's comment. node-postgres's `.toISOString()` shifts DATE columns by
+ * a day in any timezone behind UTC; local accessors don't. This affects
+ * more than display here: the shifted date gets stored verbatim as each
+ * forecast ChartPoint's `date` field in market_forecasts_latest. */
+function dateOnlyToIso(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 async function fetchBarsForSymbol(symbol: string) {
   const pool = getIngestPool();
   const rows = await pool.query<BarRow>(
@@ -81,7 +93,7 @@ async function fetchBarsForSymbol(symbol: string) {
       symbol: row.symbol,
       tradeDate:
         row.trade_date instanceof Date
-          ? row.trade_date.toISOString().slice(0, 10)
+          ? dateOnlyToIso(row.trade_date)
           : String(row.trade_date).slice(0, 10),
       open: Number(row.open),
       high: Number(row.high),

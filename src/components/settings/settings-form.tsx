@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChartLine, Database, Palette, Shield } from "lucide-react";
+import { ChartLine, Database, LogOut, Palette, Shield } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,11 @@ function SettingRow({
       <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
     </div>
   );
+}
+
+async function handleLogout() {
+  await fetch("/api/auth/logout", { method: "POST" });
+  window.location.href = "/login";
 }
 
 export function SettingsForm() {
@@ -243,6 +248,24 @@ export function SettingsForm() {
               </Button>
             </Link>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <LogOut className="h-5 w-5 text-primary" />
+            <CardTitle>Account</CardTitle>
+          </div>
+          <CardDescription>
+            Sign out of this app on this device. Available here so it&apos;s reachable on
+            mobile, where the sidebar isn&apos;t shown.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={handleLogout}>
+            Log out
+          </Button>
         </CardContent>
       </Card>
 

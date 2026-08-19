@@ -8,6 +8,12 @@ import {
 } from "@/lib/market/change-direction";
 import { stockChartYAxisDomain } from "@/lib/market/chart-domain";
 import { resolveListingLabels } from "@/lib/pse/apply-official-labels";
+import {
+  SIGNAL_HORIZON_DAYS,
+  computeConsensusSignal,
+  consensusTargetPrice,
+} from "@/lib/signal/consensus";
+import { computeEntryExitPlan } from "@/lib/signal/entry-exit";
 
 const MODEL_ROWS = [
   {
@@ -217,6 +223,23 @@ export function buildStockAnalysisFromSeed(seed: StockSeed): StockAnalysis {
   const mae = (seed.lastClose * scale).toFixed(2);
   const rmse = (seed.lastClose * scale * 1.25).toFixed(2);
 
+  // The demo seed only has 11 fabricated history points (well under
+  // MIN_CLOSES_FOR_SIGNAL), so this path naturally reports "insufficient
+  // data" rather than fabricating a signal from fabricated prices — more
+  // honest than the alternative on a snapshot/CI fallback path.
+  const signal = isIndex ? null : computeConsensusSignal(historical, SIGNAL_HORIZON_DAYS, []);
+  const entryExitPlan =
+    isIndex || !signal?.dataSufficient
+      ? null
+      : computeEntryExitPlan(
+          signal.action,
+          seed.lastClose,
+          null,
+          null,
+          null,
+          consensusTargetPrice(signal.votes),
+        );
+
   return {
     info: {
       name: seed.name,
@@ -250,6 +273,12 @@ export function buildStockAnalysisFromSeed(seed: StockSeed): StockAnalysis {
         ? { ...row, mae, rmse, mape: `${(scale * 100).toFixed(2)}%` }
         : { ...row },
     ),
+    signal,
+    entryExitPlan,
+    // Seed data has no real shares-outstanding to compute market cap from —
+    // an honest null beats a fabricated company-size number.
+    companyStats: null,
+    fundamentals: null,
     aiInsight: {
       summary: trendSummary(seed, forecastTarget, isIndex),
       caution: `Directional accuracy is ${seed.directionalAccuracy}% for this ticker. Use for research only—not investment advice.`,

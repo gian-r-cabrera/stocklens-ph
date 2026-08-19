@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   LineChart,
   ListChecks,
+  NotebookPen,
   Settings,
   TrendingUp,
 } from "lucide-react";
@@ -17,6 +18,7 @@ const tabs = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/stocks", label: "Stocks", icon: LineChart },
   { href: "/watchlist", label: "Watchlist", icon: ListChecks },
+  { href: "/journal", label: "Journal", icon: NotebookPen },
   { href: "/forecasts", label: "Forecasts", icon: TrendingUp },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;

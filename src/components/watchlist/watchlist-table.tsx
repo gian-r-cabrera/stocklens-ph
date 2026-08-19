@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PriceChange } from "@/components/ui/price-change";
+import { SignalBadge } from "@/components/ui/signal-badge";
 import { TrendBadge } from "@/components/ui/trend-badge";
 import { tickerToPath } from "@/lib/forecast";
 import { useWatchlistStore } from "@/lib/stores/watchlist-store";
@@ -59,6 +60,7 @@ export function WatchlistTable() {
               <TableHead>Price</TableHead>
               <TableHead>Change</TableHead>
               <TableHead>Trend</TableHead>
+              <TableHead>Signal</TableHead>
               <TableHead>Added</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -81,6 +83,9 @@ export function WatchlistTable() {
                 </TableCell>
                 <TableCell>
                   <TrendBadge trend={stock.trend} />
+                </TableCell>
+                <TableCell>
+                  {stock.signal != null ? <SignalBadge action={stock.signal} /> : "—"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {stock.addedDate}

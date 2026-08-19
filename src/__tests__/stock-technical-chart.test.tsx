@@ -22,6 +22,7 @@ function point(overrides: Partial<IndicatorPoint>): IndicatorPoint {
     macd: null,
     macdSignal: null,
     macdHist: null,
+    atr14: null,
     ...overrides,
   };
 }

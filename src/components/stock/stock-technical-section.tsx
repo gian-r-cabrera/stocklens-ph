@@ -41,6 +41,7 @@ const PANEL_OPTIONS: { key: TechnicalPanelKey; label: string }[] = [
   { key: "volume", label: "Volume" },
   { key: "rsi", label: "RSI" },
   { key: "macd", label: "MACD" },
+  { key: "atr", label: "ATR" },
 ];
 
 export function StockTechnicalSection({
@@ -134,6 +135,8 @@ export function StockTechnicalSection({
             isIndex={isIndex}
             forecastPoints={analysis.chartData}
             visiblePanels={visiblePanels}
+            support={analysis.entryExitPlan?.support ?? null}
+            resistance={analysis.entryExitPlan?.resistance ?? null}
           />
           {loading ? (
             <div

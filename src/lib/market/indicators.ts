@@ -10,6 +10,14 @@ export type IndicatorPoint = {
   macd: number | null;
   macdSignal: number | null;
   macdHist: number | null;
+  atr14: number | null;
+};
+
+export type SwingLevel = { date: string; price: number };
+
+export type SupportResistance = {
+  support: SwingLevel | null;
+  resistance: SwingLevel | null;
 };
 
 function sma(values: number[], period: number, index: number): number | null {
@@ -50,6 +58,73 @@ function computeRsi(closes: number[], period = 14): (number | null)[] {
   }
 
   return out;
+}
+
+/** Wilder ATR (14-period default). True range needs a previous close, so
+ * index 0 is always null and the first ATR value (index `period`) is a
+ * simple average of true ranges 1..period — same off-by-one shape as
+ * computeRsi. */
+function computeAtr(bars: MarketBar[], period = 14): (number | null)[] {
+  const out: (number | null)[] = new Array(bars.length).fill(null);
+  if (bars.length < period + 1) return out;
+
+  const tr: number[] = new Array(bars.length).fill(0);
+  for (let i = 1; i < bars.length; i++) {
+    const high = Number(bars[i]!.high);
+    const low = Number(bars[i]!.low);
+    const prevClose = Number(bars[i - 1]!.close);
+    tr[i] = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+  }
+
+  let sum = 0;
+  for (let i = 1; i <= period; i++) sum += tr[i]!;
+  let atr = sum / period;
+  out[period] = atr;
+
+  for (let i = period + 1; i < bars.length; i++) {
+    atr = (atr * (period - 1) + tr[i]!) / period;
+    out[i] = atr;
+  }
+
+  return out;
+}
+
+/** Fractal swing high/low detector: a bar is a swing high/low if its
+ * high/low is the extreme within a `window`-bar radius on both sides. The
+ * most recent `window` bars can never produce a new pivot yet (not enough
+ * look-ahead to confirm them) — expected, not a bug. */
+export function computeSupportResistance(bars: MarketBar[], window = 10): SupportResistance {
+  const sorted = [...bars].sort((a, b) => a.tradeDate.localeCompare(b.tradeDate));
+  const n = sorted.length;
+  const supportLevels: SwingLevel[] = [];
+  const resistanceLevels: SwingLevel[] = [];
+
+  for (let i = window; i < n - window; i++) {
+    const bar = sorted[i]!;
+    const high = Number(bar.high);
+    const low = Number(bar.low);
+    let isHigh = true;
+    let isLow = true;
+    for (let j = i - window; j <= i + window; j++) {
+      if (j === i) continue;
+      if (Number(sorted[j]!.high) >= high) isHigh = false;
+      if (Number(sorted[j]!.low) <= low) isLow = false;
+    }
+    if (isHigh) resistanceLevels.push({ date: bar.tradeDate, price: high });
+    if (isLow) supportLevels.push({ date: bar.tradeDate, price: low });
+  }
+
+  const lastClose = n > 0 ? Number(sorted[n - 1]!.close) : 0;
+  const support =
+    supportLevels
+      .filter((s) => s.price < lastClose)
+      .sort((a, b) => b.price - a.price)[0] ?? null;
+  const resistance =
+    resistanceLevels
+      .filter((s) => s.price > lastClose)
+      .sort((a, b) => a.price - b.price)[0] ?? null;
+
+  return { support, resistance };
 }
 
 function emaSeries(values: number[], period: number): number[] {
@@ -100,6 +175,7 @@ export function computeIndicators(bars: MarketBar[]): IndicatorPoint[] {
   const closes = sorted.map((b) => Number(b.close));
   const rsi = computeRsi(closes, 14);
   const { macd, signal, hist } = computeMacd(closes);
+  const atr = computeAtr(sorted, 14);
 
   return sorted.map((bar, i) => ({
     date: bar.tradeDate,
@@ -111,5 +187,6 @@ export function computeIndicators(bars: MarketBar[]): IndicatorPoint[] {
     macd: macd[i] ?? null,
     macdSignal: signal[i] ?? null,
     macdHist: hist[i] ?? null,
+    atr14: atr[i] ?? null,
   }));
 }

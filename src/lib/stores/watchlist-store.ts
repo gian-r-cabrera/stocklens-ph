@@ -8,6 +8,8 @@ import { watchlistStocks as seedWatchlist } from "@/lib/data/watchlist";
 import type { WatchlistStock } from "@/lib/data/watchlist";
 import { TICKER_BY_SYMBOL } from "@/lib/constants/tickers";
 import { getStockAnalysisStatic } from "@/lib/data/stocks";
+import type { SignalAction } from "@/lib/signal/types";
+
 export type AddStockResult =
   | { ok: true }
   | { ok: false; reason: "duplicate" | "invalid" | "limit" };
@@ -19,6 +21,7 @@ type WatchlistState = {
   hasStock: (ticker: string) => boolean;
   isAtLimit: () => boolean;
   refreshPrices: () => Promise<void>;
+  refreshSignals: () => Promise<void>;
 };
 
 function toWatchlistEntry(ticker: string): WatchlistStock | null {
@@ -111,10 +114,36 @@ export const useWatchlistStore = create<WatchlistState>()(
           /* keep cached values */
         }
       },
+      refreshSignals: async () => {
+        const tickers = get().stocks.map((s) => s.ticker);
+        if (tickers.length === 0) return;
+
+        try {
+          const res = await fetch(
+            `/api/market/signals?symbols=${encodeURIComponent(tickers.join(","))}`,
+          );
+          if (!res.ok) return;
+          const body = (await res.json()) as {
+            signals?: Record<string, { action: SignalAction; confidence: number }>;
+          };
+          const signals = body.signals;
+          if (!signals) return;
+
+          set((state) => ({
+            stocks: state.stocks.map((stock) => {
+              const s = signals[stock.ticker];
+              if (!s) return stock;
+              return { ...stock, signal: s.action };
+            }),
+          }));
+        } catch {
+          /* keep cached values */
+        }
+      },
     }),
     {
       name: "stocklens-watchlist",
-      version: 2,
+      version: 3,
       migrate: (persisted, version) => {
         const state = persisted as { stocks?: WatchlistStock[] };
         if (version < 2 && Array.isArray(state.stocks)) {
@@ -122,6 +151,8 @@ export const useWatchlistStore = create<WatchlistState>()(
             stocks: state.stocks.slice(0, WATCHLIST_MAX_STOCKS),
           };
         }
+        // v3 adds an optional `signal` field, populated by refreshSignals() —
+        // no transform needed, existing rows simply lack it until refreshed.
         return persisted as WatchlistState;
       },
     },

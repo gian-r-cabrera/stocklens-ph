@@ -1,3 +1,4 @@
+import type { SignalAction } from "@/lib/signal/types";
 import type { ForecastTrend } from "@/lib/types/stock";
 
 export type WatchlistStock = {
@@ -9,6 +10,8 @@ export type WatchlistStock = {
   sector: string;
   trend: ForecastTrend;
   addedDate: string;
+  /** Undefined until refreshSignals() runs — pre-migration/unrefreshed rows. */
+  signal?: SignalAction;
 };
 
 export const watchlistStocks: WatchlistStock[] = [

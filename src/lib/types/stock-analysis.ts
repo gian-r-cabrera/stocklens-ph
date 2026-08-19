@@ -1,3 +1,5 @@
+import type { CompanyStats, Fundamentals } from "@/lib/market/types";
+import type { ConsensusSignal, EntryExitPlan } from "@/lib/signal/types";
 import type { ForecastTrend } from "@/lib/types/stock";
 
 export type StockInfo = {
@@ -47,6 +49,10 @@ export type StockAnalysis = {
   forecastStartDate: string;
   performance: PerformanceMetrics;
   modelComparison: ModelComparisonRow[];
+  signal: ConsensusSignal | null;
+  entryExitPlan: EntryExitPlan | null;
+  companyStats: CompanyStats | null;
+  fundamentals: Fundamentals | null;
   aiInsight: {
     summary: string;
     caution: string;

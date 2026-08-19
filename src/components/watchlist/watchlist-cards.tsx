@@ -13,6 +13,7 @@ import {
 import type { WatchlistStock } from "@/lib/data/watchlist";
 import { directionFromChangeString } from "@/lib/market/change-direction";
 import { PriceChange, PriceDirectionIcon } from "@/components/ui/price-change";
+import { SignalBadge } from "@/components/ui/signal-badge";
 import { TrendBadge } from "@/components/ui/trend-badge";
 import { tickerToPath } from "@/lib/forecast";
 import { useWatchlistStore } from "@/lib/stores/watchlist-store";
@@ -34,9 +35,14 @@ function WatchlistCard({ stock }: { stock: WatchlistStock }) {
           <PriceChange change={stock.change} className="text-sm" />
         </div>
         <div className="mt-3 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground">Trend:</span>
-            <TrendBadge trend={stock.trend} className="text-xs" />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">Trend:</span>
+              <TrendBadge trend={stock.trend} className="text-xs" />
+            </div>
+            {stock.signal != null ? (
+              <SignalBadge action={stock.signal} className="text-xs" />
+            ) : null}
           </div>
           <Link href={`/stock/${tickerToPath(stock.ticker)}`}>
             <Button variant="ghost" size="sm" className="h-7">

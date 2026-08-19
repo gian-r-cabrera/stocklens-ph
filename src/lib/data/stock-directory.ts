@@ -2,7 +2,7 @@ import { getStockAnalysisStatic } from "@/lib/data/stocks";
 import { tickerToPath } from "@/lib/forecast";
 import { directionFromChangeString } from "@/lib/market/change-direction";
 import type { PriceDirection } from "@/lib/market/change-direction";
-import { quoteToDisplay } from "@/lib/market/format-quote";
+import { parsePriceAmount, quoteToDisplay } from "@/lib/market/format-quote";
 import { toQuotesMap } from "@/lib/market/quotes-map";
 import { tickerToSymbol } from "@/lib/market/symbol";
 import type { MarketQuote } from "@/lib/market/types";
@@ -37,11 +37,6 @@ export type StockDirectoryEntry = {
   changePctNum: number | null;
 };
 
-function parseDisplayPrice(value: string): number | null {
-  if (value === "—") return null;
-  const n = Number.parseFloat(value.replace(/[₱,\s]/g, ""));
-  return Number.isNaN(n) ? null : n;
-}
 
 function parseDisplayChangePct(value: string): number | null {
   if (value === "—") return null;
@@ -95,7 +90,7 @@ export function getStockDirectoryEntries(
       changeDirection,
       trend: analysis?.trend ?? null,
       hasAnalysis: isAnalyzedTicker(company.ticker),
-      lastCloseNum: parseDisplayPrice(lastClose),
+      lastCloseNum: parsePriceAmount(lastClose),
       changePctNum:
         changePctNum ?? parseDisplayChangePct(dailyChange),
     };

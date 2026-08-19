@@ -16,10 +16,24 @@ type BarRow = {
   volume: string | null;
 };
 
+/** node-postgres parses a DATE column into a JS Date at *local* midnight —
+ * reading it back via `.toISOString()` (UTC-based) shifts the calendar
+ * date by a day in any timezone behind UTC (confirmed live against real
+ * data: a stored "2026-08-14" round-tripped as "2026-08-13" on a UTC+8
+ * machine — see also fundamentals-repository.ts, which had the same bug).
+ * Local accessors (getFullYear/getMonth/getDate) reflect the correct
+ * stored date regardless of system timezone; UTC accessors don't. */
+function dateOnlyToIso(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function rowToBar(row: BarRow): MarketBar {
   const date =
     row.trade_date instanceof Date
-      ? row.trade_date.toISOString().slice(0, 10)
+      ? dateOnlyToIso(row.trade_date)
       : String(row.trade_date).slice(0, 10);
   return {
     symbol: row.symbol,
