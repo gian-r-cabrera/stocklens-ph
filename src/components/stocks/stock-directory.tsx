@@ -170,7 +170,6 @@ function DirectoryTable({ entries }: { entries: StockDirectoryEntry[] }) {
             <TableHead>Ticker</TableHead>
             <TableHead>Company</TableHead>
             <TableHead>Sector</TableHead>
-            <TableHead>Subsector</TableHead>
             <TableHead>Last close</TableHead>
             <TableHead>Change</TableHead>
             <TableHead>P/E · Yield</TableHead>
@@ -187,16 +186,18 @@ function DirectoryTable({ entries }: { entries: StockDirectoryEntry[] }) {
                   <KindBadge kind={entry.kind} />
                 </span>
               </TableCell>
-              <TableCell className="max-w-[200px] truncate">
+              <TableCell className="max-w-[160px] truncate">
                 {entry.name}
               </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {entry.sector}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
-                {entry.subsector}
+              <TableCell className="max-w-[140px]">
+                <div className="flex flex-col gap-0.5">
+                  <Badge variant="outline" className="w-fit text-xs">
+                    {entry.sector}
+                  </Badge>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {entry.subsector}
+                  </span>
+                </div>
               </TableCell>
               <TableCell className="tabular-nums">{entry.lastClose}</TableCell>
               <TableCell>

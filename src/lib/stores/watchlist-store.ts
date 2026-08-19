@@ -14,6 +14,19 @@ export type AddStockResult =
   | { ok: true }
   | { ok: false; reason: "duplicate" | "invalid" | "limit" };
 
+/** Whether a ticker is part of the hardcoded seed the store initializes
+ * with. SSR always renders against this seed (no access to the visitor's
+ * localStorage), so any client render that runs before the real persisted
+ * watchlist has loaded must also use this — not the live store value — to
+ * avoid a hydration mismatch. See stock-header.tsx. */
+export function isSeededWatchlistTicker(ticker: string): boolean {
+  return seedWatchlist.some((s) => s.ticker === ticker.toUpperCase());
+}
+
+/** Same seed-matching rationale as isSeededWatchlistTicker, for the
+ * "watchlist full" check. */
+export const isSeedWatchlistAtLimit = seedWatchlist.length >= WATCHLIST_MAX_STOCKS;
+
 type WatchlistState = {
   stocks: WatchlistStock[];
   addStock: (ticker: string) => AddStockResult;

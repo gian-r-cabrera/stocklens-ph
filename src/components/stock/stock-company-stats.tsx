@@ -5,7 +5,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatPriceAmount } from "@/lib/market/format-quote";
+import { formatCompactMoney, formatPriceAmount } from "@/lib/market/format-quote";
 import type { StockAnalysis } from "@/lib/types/stock-analysis";
 
 function formatShares(value: number | null): string {
@@ -16,7 +16,7 @@ function formatPct(value: number | null): string {
   return value != null ? `${value.toFixed(1)}%` : "—";
 }
 
-function formatMoney(value: number | null): string {
+function formatPerShare(value: number | null): string {
   return value != null ? formatPriceAmount(value) : "—";
 }
 
@@ -43,14 +43,14 @@ export function StockCompanyStats({ analysis }: { analysis: StockAnalysis }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
-        <Stat label="Market Cap" value={formatMoney(companyStats.marketCap)} />
+        <Stat label="Market Cap" value={formatCompactMoney(companyStats.marketCap)} />
         <Stat label="Outstanding Shares" value={formatShares(companyStats.outstandingShares)} />
         <Stat label="Free Float" value={formatPct(companyStats.freeFloatPct)} />
         <Stat
           label="Foreign Ownership Limit"
           value={formatPct(companyStats.foreignOwnershipLimitPct)}
         />
-        <Stat label="Par Value" value={formatMoney(companyStats.parValue)} />
+        <Stat label="Par Value" value={formatPerShare(companyStats.parValue)} />
       </CardContent>
     </Card>
   );

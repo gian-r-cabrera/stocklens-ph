@@ -1,6 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,14 +22,38 @@ import { tickerToPath } from "@/lib/forecast";
 import { useWatchlistStore } from "@/lib/stores/watchlist-store";
 
 function WatchlistCard({ stock }: { stock: WatchlistStock }) {
+  const removeStock = useWatchlistStore((s) => s.removeStock);
+  const addStock = useWatchlistStore((s) => s.addStock);
+
+  const handleRemove = () => {
+    removeStock(stock.ticker);
+    toast.message(`Removed ${stock.ticker} from watchlist.`, {
+      action: {
+        label: "Undo",
+        onClick: () => addStock(stock.ticker),
+      },
+    });
+  };
+
   return (
     <Card className="card-interactive">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <WatchlistCardMeta stock={stock} />
-          <PriceDirectionIcon
-            direction={directionFromChangeString(stock.change)}
-          />
+          <div className="flex items-center gap-1">
+            <PriceDirectionIcon
+              direction={directionFromChangeString(stock.change)}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+              aria-label={`Remove ${stock.ticker} from watchlist`}
+              onClick={handleRemove}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

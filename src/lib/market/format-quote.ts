@@ -30,6 +30,20 @@ export function parsePriceAmount(formatted: string): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+/** For company-wide money aggregates (market cap, revenue, net income) —
+ * unlike formatPriceAmount (built for per-share prices), these routinely
+ * run into the billions, where full-precision centavos are unreadable.
+ * Handles negatives (e.g. a net loss) with a leading sign. */
+export function formatCompactMoney(value: number | null): string {
+  if (value == null) return "—";
+  const sign = value < 0 ? "-" : "";
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000_000) return `${sign}₱${(abs / 1_000_000_000).toFixed(2)}B`;
+  if (abs >= 1_000_000) return `${sign}₱${(abs / 1_000_000).toFixed(2)}M`;
+  if (abs >= 1_000) return `${sign}₱${(abs / 1_000).toFixed(2)}K`;
+  return `${sign}₱${abs.toFixed(2)}`;
+}
+
 export function formatVolumeAmount(volume: number | null): string {
   if (volume == null || volume <= 0) return "—";
   if (volume >= 1_000_000) return `${(volume / 1_000_000).toFixed(1)}M`;

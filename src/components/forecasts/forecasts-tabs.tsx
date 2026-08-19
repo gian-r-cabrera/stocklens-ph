@@ -29,94 +29,201 @@ import type { ModelPerformance, StockForecast } from "@/lib/data/forecasts";
 import { isDownwardTrend, isUpwardTrend, tickerToPath } from "@/lib/forecast";
 import type { ForecastsPayload } from "@/lib/api/market-provider/types";
 
+type ForecastTableProps = {
+  forecasts: StockForecast[];
+  caption: string;
+  showSector?: boolean;
+  showExpectedChange?: boolean;
+  expectedChangeLabel?: string;
+};
+
 function ForecastTable({
   forecasts,
   caption,
   showSector = true,
   showExpectedChange = false,
   expectedChangeLabel = "Expected Change",
-}: {
-  forecasts: StockForecast[];
-  caption: string;
-  showSector?: boolean;
-  showExpectedChange?: boolean;
-  expectedChangeLabel?: string;
-}) {
+}: ForecastTableProps) {
   return (
-    <Table>
-      <TableCaption className="sr-only">{caption}</TableCaption>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Ticker</TableHead>
-          <TableHead>Company</TableHead>
-          {showSector && <TableHead>Sector</TableHead>}
-          <TableHead>Current Price</TableHead>
-          <TableHead>7-Day Forecast</TableHead>
-          {showExpectedChange ? (
-            <TableHead>{expectedChangeLabel}</TableHead>
-          ) : (
-            <TableHead>Trend</TableHead>
-          )}
-          <TableHead>Accuracy</TableHead>
-          <TableHead className="text-right">Action</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {forecasts.map((forecast) => (
-          <TableRow key={forecast.ticker}>
-            <TableCell className="font-medium">{forecast.ticker}</TableCell>
-            <TableCell>{forecast.company}</TableCell>
-            {showSector && (
-              <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {forecast.sector}
-                </Badge>
-              </TableCell>
-            )}
-            <TableCell>{forecast.currentPrice}</TableCell>
-            <TableCell
-              className={cn(
-                "font-medium",
-                showExpectedChange &&
-                  isUpwardTrend(forecast.trend) &&
-                  "text-trend-up",
-                showExpectedChange &&
-                  isDownwardTrend(forecast.trend) &&
-                  "text-trend-down",
-              )}
-            >
-              {forecast.forecast7d}
-            </TableCell>
+    <div className="hidden overflow-x-auto md:block">
+      <Table>
+        <TableCaption className="sr-only">{caption}</TableCaption>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Ticker</TableHead>
+            {showSector && <TableHead>Sector</TableHead>}
+            <TableHead>Current Price</TableHead>
+            <TableHead>7-Day Forecast</TableHead>
             {showExpectedChange ? (
+              <TableHead>{expectedChangeLabel}</TableHead>
+            ) : (
+              <TableHead>Trend</TableHead>
+            )}
+            <TableHead>Accuracy</TableHead>
+            <TableHead className="text-right">Action</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {forecasts.map((forecast) => (
+            <TableRow key={forecast.ticker}>
+              <TableCell className="max-w-[180px] font-medium">
+                <div>{forecast.ticker}</div>
+                <div className="truncate text-xs font-normal text-muted-foreground">
+                  {forecast.company}
+                </div>
+              </TableCell>
+              {showSector && (
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">
+                    {forecast.sector}
+                  </Badge>
+                </TableCell>
+              )}
+              <TableCell className="tabular-nums">{forecast.currentPrice}</TableCell>
               <TableCell
                 className={cn(
-                  "font-medium",
-                  isUpwardTrend(forecast.trend) && "text-trend-up",
-                  isDownwardTrend(forecast.trend) && "text-trend-down",
+                  "tabular-nums font-medium",
+                  showExpectedChange &&
+                    isUpwardTrend(forecast.trend) &&
+                    "text-trend-up",
+                  showExpectedChange &&
+                    isDownwardTrend(forecast.trend) &&
+                    "text-trend-down",
                 )}
               >
-                {forecast.expectedChange ?? "—"}
+                {forecast.forecast7d}
               </TableCell>
-            ) : (
-              <TableCell>
-                <TrendBadge trend={forecast.trend} />
+              {showExpectedChange ? (
+                <TableCell
+                  className={cn(
+                    "tabular-nums font-medium",
+                    isUpwardTrend(forecast.trend) && "text-trend-up",
+                    isDownwardTrend(forecast.trend) && "text-trend-down",
+                  )}
+                >
+                  {forecast.expectedChange ?? "—"}
+                </TableCell>
+              ) : (
+                <TableCell>
+                  <TrendBadge trend={forecast.trend} />
+                </TableCell>
+              )}
+              <TableCell className="tabular-nums">{forecast.accuracy}</TableCell>
+              <TableCell className="text-right">
+                <Link
+                  href={`/stock/${tickerToPath(forecast.ticker)}`}
+                  aria-label={`Analyze ${forecast.ticker}`}
+                >
+                  <Button variant="default" size="sm">
+                    Analyze
+                  </Button>
+                </Link>
               </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function ForecastCard({
+  forecast,
+  showSector = true,
+  showExpectedChange = false,
+  expectedChangeLabel = "Expected Change",
+}: {
+  forecast: StockForecast;
+} & Pick<ForecastTableProps, "showSector" | "showExpectedChange" | "expectedChangeLabel">) {
+  return (
+    <Card className="card-interactive">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-base">{forecast.ticker}</CardTitle>
+            <CardDescription className="text-xs">{forecast.company}</CardDescription>
+          </div>
+          {showSector ? (
+            <Badge variant="outline" className="shrink-0 text-xs">
+              {forecast.sector}
+            </Badge>
+          ) : null}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-end justify-between">
+          <span className="tabular-nums text-xl font-semibold">
+            {forecast.currentPrice}
+          </span>
+          <span
+            className={cn(
+              "tabular-nums text-sm font-medium",
+              showExpectedChange &&
+                isUpwardTrend(forecast.trend) &&
+                "text-trend-up",
+              showExpectedChange &&
+                isDownwardTrend(forecast.trend) &&
+                "text-trend-down",
             )}
-            <TableCell>{forecast.accuracy}</TableCell>
-            <TableCell className="text-right">
-              <Link
-                href={`/stock/${tickerToPath(forecast.ticker)}`}
-                aria-label={`Analyze ${forecast.ticker}`}
-              >
-                <Button variant="default" size="sm">
-                  Analyze
-                </Button>
-              </Link>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+          >
+            {forecast.forecast7d}
+          </span>
+        </div>
+        <div className="flex items-center justify-between text-xs">
+          {showExpectedChange ? (
+            <span
+              className={cn(
+                "tabular-nums font-medium",
+                isUpwardTrend(forecast.trend) && "text-trend-up",
+                isDownwardTrend(forecast.trend) && "text-trend-down",
+              )}
+            >
+              {expectedChangeLabel}: {forecast.expectedChange ?? "—"}
+            </span>
+          ) : (
+            <TrendBadge trend={forecast.trend} className="text-xs" />
+          )}
+          <span className="tabular-nums text-muted-foreground">
+            Accuracy: {forecast.accuracy}
+          </span>
+        </div>
+        <Link href={`/stock/${tickerToPath(forecast.ticker)}`} className="block">
+          <Button variant="outline" size="sm" className="w-full">
+            Analyze
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ForecastCards({
+  forecasts,
+  showSector = true,
+  showExpectedChange = false,
+  expectedChangeLabel = "Expected Change",
+}: ForecastTableProps) {
+  return (
+    <div className="grid gap-4 md:hidden">
+      {forecasts.map((forecast) => (
+        <ForecastCard
+          key={forecast.ticker}
+          forecast={forecast}
+          showSector={showSector}
+          showExpectedChange={showExpectedChange}
+          expectedChangeLabel={expectedChangeLabel}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ForecastList(props: ForecastTableProps) {
+  return (
+    <>
+      <ForecastTable {...props} />
+      <ForecastCards {...props} />
+    </>
   );
 }
 
@@ -168,8 +275,8 @@ export function ForecastsTabs({
             <CardTitle>All Stock Forecasts</CardTitle>
             <CardDescription>7-day price forecasts using the linear regression model</CardDescription>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <ForecastTable
+          <CardContent>
+            <ForecastList
               forecasts={forecasts}
               caption="All stock forecasts"
             />
@@ -185,8 +292,8 @@ export function ForecastsTabs({
               Stocks with predicted upward movement
             </CardDescription>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <ForecastTable
+          <CardContent>
+            <ForecastList
               forecasts={upwardForecasts}
               caption="Projected upward stock forecasts"
               showSector={false}
@@ -205,8 +312,8 @@ export function ForecastsTabs({
               Stocks with predicted downward movement
             </CardDescription>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <ForecastTable
+          <CardContent>
+            <ForecastList
               forecasts={downwardForecasts}
               caption="Projected downward stock forecasts"
               showSector={false}

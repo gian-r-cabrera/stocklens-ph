@@ -5,12 +5,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatPriceAmount, parsePriceAmount } from "@/lib/market/format-quote";
+import {
+  formatCompactMoney,
+  parsePriceAmount,
+} from "@/lib/market/format-quote";
 import type { StockAnalysis } from "@/lib/types/stock-analysis";
-
-function formatMoney(value: number | null): string {
-  return value != null ? formatPriceAmount(value) : "—";
-}
 
 function formatPerShare(value: number | null): string {
   return value != null ? `₱${value.toFixed(2)}` : "—";
@@ -79,10 +78,13 @@ export function StockFundamentals({ analysis }: { analysis: StockAnalysis }) {
           label="Dividend / Share (TTM)"
           value={formatPerShare(fundamentals.dividendPerShareTtm)}
         />
-        <Stat label="Revenue (Year-to-date)" value={formatMoney(fundamentals.grossRevenueYtd)} />
+        <Stat
+          label="Revenue (Year-to-date)"
+          value={formatCompactMoney(fundamentals.grossRevenueYtd)}
+        />
         <Stat
           label="Net Income (Year-to-date)"
-          value={formatMoney(fundamentals.netIncomeYtd)}
+          value={formatCompactMoney(fundamentals.netIncomeYtd)}
         />
         <Stat label="Net Margin (YTD)" value={formatPct(netMarginYtd)} />
       </CardContent>
