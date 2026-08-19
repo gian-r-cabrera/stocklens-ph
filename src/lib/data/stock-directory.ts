@@ -1,18 +1,9 @@
-import { getStockAnalysisStatic } from "@/lib/data/stocks";
-import { tickerToPath } from "@/lib/forecast";
-import { directionFromChangeString } from "@/lib/market/change-direction";
 import type { PriceDirection } from "@/lib/market/change-direction";
-import { parsePriceAmount, quoteToDisplay } from "@/lib/market/format-quote";
-import { toQuotesMap } from "@/lib/market/quotes-map";
-import { tickerToSymbol } from "@/lib/market/symbol";
-import type { MarketQuote } from "@/lib/market/types";
 import {
-  getAllCatalogEntries,
   getListedEquityCount,
   getPseMeta,
   getPseSectors,
   getSubsectorsForSector,
-  isAnalyzedTicker,
 } from "@/lib/pse/universe";
 import type { ForecastTrend } from "@/lib/types/stock";
 
@@ -35,67 +26,20 @@ export type StockDirectoryEntry = {
   lastCloseNum: number | null;
   /** For sort; null when unknown */
   changePctNum: number | null;
+  /** null when no fundamentals filing found, or EPS TTM <= 0 (a negative-
+   * earnings P/E is misleading noise, not a real ratio). */
+  peRatio: number | null;
+  /** null when no fundamentals filing, or the company paid no TTM dividend. */
+  dividendYieldPct: number | null;
+  /** null when no company-stats row found. */
+  marketCap: number | null;
 };
 
-
-function parseDisplayChangePct(value: string): number | null {
-  if (value === "—") return null;
-  const n = Number.parseFloat(value.replace(/%/g, "").replace(/\+/g, ""));
-  return Number.isNaN(n) ? null : n;
-}
-
-function kindFromSector(sector: string): StockDirectoryKind {
-  if (sector === "Index") return "index";
-  if (sector === "ETF") return "etf";
-  return "equity";
-}
-
-export function getStockDirectoryEntries(
-  quotes?: Map<string, MarketQuote> | Record<string, MarketQuote>,
-): StockDirectoryEntry[] {
-  const quoteMap = toQuotesMap(quotes);
-  return getAllCatalogEntries().map((company) => {
-    const analysis = company.hasAnalysis
-      ? getStockAnalysisStatic(company.ticker)
-      : null;
-    const isIndex = company.sector === "Index";
-    const quote = quoteMap.get(tickerToSymbol(company.ticker));
-
-    let lastClose = analysis?.metrics.lastClose ?? "—";
-    let dailyChange = analysis?.metrics.dailyChange ?? "—";
-    let changeDirection: PriceDirection = analysis
-      ? directionFromChangeString(analysis.metrics.dailyChange)
-      : "flat";
-
-    let changePctNum: number | null = null;
-
-    if (quote) {
-      const display = quoteToDisplay(quote, isIndex);
-      lastClose = display.lastClose;
-      dailyChange = display.dailyChange;
-      changeDirection = display.direction;
-      changePctNum = quote.changePct;
-    }
-
-    return {
-      ticker: company.ticker,
-      name: company.companyName,
-      sector: company.sector,
-      subsector: company.subsector,
-      path: company.path || tickerToPath(company.ticker),
-      kind: kindFromSector(company.sector),
-      lastClose,
-      dailyChange,
-      positive: changeDirection === "up",
-      changeDirection,
-      trend: analysis?.trend ?? null,
-      hasAnalysis: isAnalyzedTicker(company.ticker),
-      lastCloseNum: parsePriceAmount(lastClose),
-      changePctNum:
-        changePctNum ?? parseDisplayChangePct(dailyChange),
-    };
-  });
-}
+// This file is imported by the client-side <StockDirectory> component (for
+// the pure filter/lookup helpers below), so it must stay free of anything
+// that pulls in Node-only code — building StockDirectoryEntry[] itself
+// needs the fundamentals/company-stats repositories (which import `pg`),
+// so that lives server-only in stock-directory-server.ts instead.
 
 export function getEquityDirectoryCount(): number {
   return getListedEquityCount();

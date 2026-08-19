@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { StockDirectoryEntry } from "@/lib/data/stock-directory";
 import {
   buildSectorCounts,
+  filterDirectoryByDividendYield,
   filterDirectoryByKind,
+  filterDirectoryByPe,
   filterDirectoryByTier,
   sortDirectoryEntries,
 } from "@/lib/data/stock-directory-filters";
@@ -25,6 +27,9 @@ function entry(
     kind: "equity",
     lastCloseNum: null,
     changePctNum: null,
+    peRatio: null,
+    dividendYieldPct: null,
+    marketCap: null,
     ...partial,
   };
 }
@@ -71,6 +76,54 @@ describe("stock-directory-filters", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0].ticker).toBe("FMETF");
+  });
+
+  it("sorts by P/E ascending with nulls sinking to the bottom", () => {
+    const rows = sortDirectoryEntries(
+      [
+        entry({ ticker: "NODATA", peRatio: null }),
+        entry({ ticker: "EXPENSIVE", peRatio: 30 }),
+        entry({ ticker: "CHEAP", peRatio: 8 }),
+      ],
+      "peRatio",
+    );
+    expect(rows.map((r) => r.ticker)).toEqual(["CHEAP", "EXPENSIVE", "NODATA"]);
+  });
+
+  it("sorts by dividend yield descending with nulls sinking to the bottom", () => {
+    const rows = sortDirectoryEntries(
+      [
+        entry({ ticker: "NODATA", dividendYieldPct: null }),
+        entry({ ticker: "LOW", dividendYieldPct: 1 }),
+        entry({ ticker: "HIGH", dividendYieldPct: 6 }),
+      ],
+      "dividendYield",
+    );
+    expect(rows.map((r) => r.ticker)).toEqual(["HIGH", "LOW", "NODATA"]);
+  });
+
+  it("filters by P/E threshold, excluding entries with no P/E data", () => {
+    const rows = filterDirectoryByPe(
+      [
+        entry({ ticker: "CHEAP", peRatio: 8 }),
+        entry({ ticker: "EXPENSIVE", peRatio: 25 }),
+        entry({ ticker: "NODATA", peRatio: null }),
+      ],
+      "under10",
+    );
+    expect(rows.map((r) => r.ticker)).toEqual(["CHEAP"]);
+  });
+
+  it("filters by minimum dividend yield, excluding entries with no yield data", () => {
+    const rows = filterDirectoryByDividendYield(
+      [
+        entry({ ticker: "HIGH", dividendYieldPct: 5 }),
+        entry({ ticker: "LOW", dividendYieldPct: 1 }),
+        entry({ ticker: "NODATA", dividendYieldPct: null }),
+      ],
+      "atLeast4",
+    );
+    expect(rows.map((r) => r.ticker)).toEqual(["HIGH"]);
   });
 
   it("builds sector counts", () => {

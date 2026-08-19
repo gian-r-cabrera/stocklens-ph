@@ -4,11 +4,8 @@ import { StockDirectory } from "@/components/stocks/stock-directory";
 import { PageShell } from "@/components/layout/page-shell";
 import { getQuotesForSymbols } from "@/lib/api/market-provider";
 import { buildSectorCounts } from "@/lib/data/stock-directory-filters";
-import {
-  getDirectoryMeta,
-  getEquityDirectoryCount,
-  getStockDirectoryEntries,
-} from "@/lib/data/stock-directory";
+import { getDirectoryMeta, getEquityDirectoryCount } from "@/lib/data/stock-directory";
+import { getStockDirectoryEntries } from "@/lib/data/stock-directory-server";
 import { getStocksMarketPriceNote } from "@/lib/data/stocks-market-note";
 import { getPseSectors } from "@/lib/pse/universe";
 import { slugToSector } from "@/lib/pse/sector-slug";
@@ -31,7 +28,7 @@ function resolveSectorParam(raw: string | undefined): string | undefined {
 export default async function StocksPage({ searchParams }: StocksPageProps) {
   const params = await searchParams;
   const quotes = await getQuotesForSymbols();
-  const entries = getStockDirectoryEntries(quotes);
+  const entries = await getStockDirectoryEntries(quotes);
   const equityCount = getEquityDirectoryCount();
   const meta = getDirectoryMeta();
   const sectorCounts = buildSectorCounts(entries);

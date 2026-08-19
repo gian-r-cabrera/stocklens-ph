@@ -41,12 +41,16 @@ import {
   type StockDirectoryEntry,
 } from "@/lib/data/stock-directory";
 import {
+  filterDirectoryByDividendYield,
   filterDirectoryByKind,
+  filterDirectoryByPe,
   filterDirectoryByTier,
   sortDirectoryEntries,
   type DirectoryKindFilter,
+  type DirectoryPeFilter,
   type DirectorySortKey,
   type DirectoryTierFilter,
+  type DirectoryYieldFilter,
 } from "@/lib/data/stock-directory-filters";
 import { buildStocksBrowseUrl } from "@/lib/pse/sector-slug";
 import { cn } from "@/lib/utils";
@@ -81,6 +85,16 @@ function KindBadge({ kind }: { kind: StockDirectoryEntry["kind"] }) {
 
 function hasMarketPrice(entry: StockDirectoryEntry): boolean {
   return entry.lastClose !== "—";
+}
+
+/** Combined "P/E · Yield" cell — one compact column instead of two, since
+ * the table is already horizontally scrollable and every extra header
+ * narrows the rest. "—" per side when that figure isn't available. */
+function formatPeAndYield(entry: StockDirectoryEntry): string {
+  const pe = entry.peRatio != null ? `${entry.peRatio.toFixed(1)}x` : "—";
+  const yieldPct =
+    entry.dividendYieldPct != null ? `${entry.dividendYieldPct.toFixed(1)}%` : "—";
+  return `${pe} · ${yieldPct}`;
 }
 
 function AnalysisBadge({ entry }: { entry: StockDirectoryEntry }) {
@@ -129,6 +143,10 @@ function DirectoryCard({ entry }: { entry: StockDirectoryEntry }) {
             <span className="text-sm text-muted-foreground">—</span>
           )}
         </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>P/E · Yield</span>
+          <span className="tabular-nums">{formatPeAndYield(entry)}</span>
+        </div>
         <AnalysisBadge entry={entry} />
         <Link href={`/stock/${entry.path}`} className="block">
           <Button variant="outline" size="sm" className="w-full">
@@ -155,6 +173,7 @@ function DirectoryTable({ entries }: { entries: StockDirectoryEntry[] }) {
             <TableHead>Subsector</TableHead>
             <TableHead>Last close</TableHead>
             <TableHead>Change</TableHead>
+            <TableHead>P/E · Yield</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Action</TableHead>
           </TableRow>
@@ -189,6 +208,9 @@ function DirectoryTable({ entries }: { entries: StockDirectoryEntry[] }) {
                 ) : (
                   <span className="text-muted-foreground">—</span>
                 )}
+              </TableCell>
+              <TableCell className="tabular-nums text-sm text-muted-foreground">
+                {formatPeAndYield(entry)}
               </TableCell>
               <TableCell>
                 <AnalysisBadge entry={entry} />
@@ -228,6 +250,8 @@ export function StockDirectory({
   });
   const [tier, setTier] = useState<DirectoryTierFilter>("all");
   const [kind, setKind] = useState<DirectoryKindFilter>("all");
+  const [peFilter, setPeFilter] = useState<DirectoryPeFilter>("all");
+  const [yieldFilter, setYieldFilter] = useState<DirectoryYieldFilter>("all");
   const [sortKey, setSortKey] = useState<DirectorySortKey>("ticker");
   const [page, setPage] = useState(1);
 
@@ -260,8 +284,10 @@ export function StockDirectory({
     let list = filterStockDirectory(entries, query, sector, subsector);
     list = filterDirectoryByTier(list, tier);
     list = filterDirectoryByKind(list, kind);
+    list = filterDirectoryByPe(list, peFilter);
+    list = filterDirectoryByDividendYield(list, yieldFilter);
     return sortDirectoryEntries(list, sortKey);
-  }, [entries, query, sector, subsector, tier, kind, sortKey]);
+  }, [entries, query, sector, subsector, tier, kind, peFilter, yieldFilter, sortKey]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -270,7 +296,7 @@ export function StockDirectory({
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, currentPage]);
 
-  const filterKey = `${query}|${sector}|${subsector}|${tier}|${kind}|${sortKey}`;
+  const filterKey = `${query}|${sector}|${subsector}|${tier}|${kind}|${peFilter}|${yieldFilter}|${sortKey}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
@@ -293,6 +319,8 @@ export function StockDirectory({
     setSubsector("all");
     setTier("all");
     setKind("all");
+    setPeFilter("all");
+    setYieldFilter("all");
     setSortKey("ticker");
     setPage(1);
   };
@@ -374,16 +402,48 @@ export function StockDirectory({
             </SelectContent>
           </Select>
           <Select
+            value={peFilter}
+            onValueChange={(v) => v && setPeFilter(v as DirectoryPeFilter)}
+          >
+            <SelectTrigger className="w-full lg:w-36" aria-label="Filter by P/E ratio">
+              <SelectValue placeholder="P/E" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">P/E: Any</SelectItem>
+              <SelectItem value="under10">P/E: Under 10x</SelectItem>
+              <SelectItem value="under15">P/E: Under 15x</SelectItem>
+              <SelectItem value="under20">P/E: Under 20x</SelectItem>
+              <SelectItem value="under30">P/E: Under 30x</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
+            value={yieldFilter}
+            onValueChange={(v) => v && setYieldFilter(v as DirectoryYieldFilter)}
+          >
+            <SelectTrigger className="w-full lg:w-44" aria-label="Filter by dividend yield">
+              <SelectValue placeholder="Dividend Yield" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Dividend Yield: Any</SelectItem>
+              <SelectItem value="atLeast2">Dividend Yield: 2%+</SelectItem>
+              <SelectItem value="atLeast4">Dividend Yield: 4%+</SelectItem>
+              <SelectItem value="atLeast6">Dividend Yield: 6%+</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select
             value={sortKey}
             onValueChange={(v) => v && setSortKey(v as DirectorySortKey)}
           >
-            <SelectTrigger className="w-full lg:w-44" aria-label="Sort stocks">
+            <SelectTrigger className="w-full lg:w-48" aria-label="Sort stocks">
               <SelectValue placeholder="Sort" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="ticker">Sort: Ticker A–Z</SelectItem>
               <SelectItem value="change">Sort: % change</SelectItem>
               <SelectItem value="price">Sort: Last close</SelectItem>
+              <SelectItem value="peRatio">Sort: P/E (low to high)</SelectItem>
+              <SelectItem value="dividendYield">Sort: Dividend yield (high to low)</SelectItem>
+              <SelectItem value="marketCap">Sort: Market cap (high to low)</SelectItem>
             </SelectContent>
           </Select>
         </div>
