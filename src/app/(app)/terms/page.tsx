@@ -47,12 +47,11 @@ export default function TermsPage() {
           PSE listing data
         </h2>
         <p>
-          Company names, sectors, and subsectors are sourced from the Philippine
-          Stock Exchange EDGE company directory and refreshed via{" "}
-          <code className="text-xs">npm run sync:pse</code>. StockLens PH is
-          not affiliated with the PSE. Official listings are for reference
-          only; prices and forecasts in demo mode may not match live market
-          data.
+          Company names, sectors, and subsectors are sourced from the
+          Philippine Stock Exchange EDGE company directory and refreshed
+          periodically. StockLens PH is not affiliated with the PSE. Official
+          listings are for reference only; prices and forecasts in demo mode
+          may not match live market data.
         </p>
 
         <h2 className="text-lg font-medium text-foreground">

@@ -143,16 +143,9 @@ export default async function LandingPage() {
               <CardContent className="space-y-2 text-sm text-muted-foreground">
                 <p>
                   <strong>For educational and research purposes only.</strong>{" "}
-                  This tool is designed for learning about forecasting
-                  techniques and exploring historical stock data patterns.
+                  {FORECAST_DISCLAIMER} Past performance does not guarantee
+                  future results.
                 </p>
-                <p>
-                  The forecasts and insights provided are{" "}
-                  <strong>not financial advice</strong> and should not be used
-                  as the sole basis for investment decisions. Past performance
-                  does not guarantee future results.
-                </p>
-                <p>{FORECAST_DISCLAIMER}</p>
                 <p>
                   Always consult with licensed financial advisors before making
                   investment decisions.

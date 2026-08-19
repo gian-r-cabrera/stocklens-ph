@@ -43,7 +43,7 @@ export function SectorSummary({ entries }: SectorSummaryProps) {
       </ul>
       <p className="text-xs text-muted-foreground">
         Or browse by sector:{" "}
-        {rows.slice(0, 5).map(([sector], i) => (
+        {rows.map(([sector], i) => (
           <span key={sector}>
             {i > 0 ? " · " : ""}
             <Link
