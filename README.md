@@ -1,6 +1,8 @@
 # StockLens PH
 
-Educational Philippine stock analytics dashboard with experimental AI forecasts. Built with Next.js 16, React 19, Tailwind v4, and shadcn/ui.
+Educational Philippine stock analytics dashboard: experimental AI forecasts, a backtested Buy/Hold/Avoid signal with entry/exit plans, real fundamentals scraped from PSE EDGE filings, and a prediction journal. Built with Next.js 16, React 19, Tailwind v4, and shadcn/ui.
+
+Live at [stocklens-ph.vercel.app](https://stocklens-ph.vercel.app) (password-gated — see [Access gate](#access-gate)).
 
 ## Disclaimer
 
@@ -15,9 +17,22 @@ Educational Philippine stock analytics dashboard with experimental AI forecasts.
 
 EOD only — not real-time. Batch ingest runs after PSE close; the app never calls EDGE/Yahoo on page load.
 
+**Current production (Vercel) actually runs `db` mode** against the live Supabase project — a deviation from the historical "Vercel = static" split above, made because the signal, fundamentals, and company-stats features need a live DB and have no static-snapshot fallback (unlike quotes/forecasts). A static-mode deploy would show those cards as unavailable, not broken.
+
 ## Brand
 
 Logo and accent live in [`src/components/brand/`](src/components/brand/) and [`src/lib/constants/brand.ts`](src/lib/constants/brand.ts) (teal `#0D6E6E`). StockLens PH is not affiliated with the PSE; do not use PSE trademarks in marketing assets.
+
+## Access gate
+
+The whole app sits behind a single shared-password login (`/login`), enforced by [`src/proxy.ts`](src/proxy.ts) — Next.js 16 renamed the `middleware.ts` convention to `proxy.ts`, and it now runs on the Node.js runtime by default (not Edge), which is why the session-token signing can use Node's built-in `crypto` directly with no auth library dependency.
+
+| Var | Purpose |
+|-----|---------|
+| `APP_PASSWORD` | The shared password checked at `POST /api/auth/login`. |
+| `AUTH_SECRET` | Signs the session cookie (HMAC-SHA256). Rotate it to invalidate all existing sessions without changing the password. |
+
+**If either var is unset, the gate fails open** (no login required) — intentional for local dev, but it means a deploy is only actually private once both are set. Sessions last 30 days. Log out from `/settings` (works on both desktop and mobile; the sidebar's logout link is desktop-only, since the mobile bottom nav has no room for it).
 
 ## Getting started
 
@@ -47,13 +62,15 @@ Keep ~2GB free disk space; corrupted `.next` caches can cause 500 errors.
 | Route | Description |
 |-------|-------------|
 | `/` | Landing page |
-| `/dashboard` | Market overview, search, featured stocks |
+| `/dashboard` | Market overview, search, featured stocks, "What's New" digest |
 | `/stocks` | Browse full PSE equity directory (search, sector, subsector) |
-| `/watchlist` | Persistent watchlist (localStorage) |
+| `/watchlist` | Persistent watchlist (localStorage), Portfolio Model Fit + Signal Backtest |
+| `/journal` | Prediction journal — log signal calls, auto-resolves against real outcomes |
 | `/forecasts` | Forecast summary and model comparison |
-| `/settings` | Preferences (localStorage) |
+| `/settings` | Preferences (localStorage), logout |
 | `/terms` | Terms & conditions |
-| `/stock/[ticker]` | Stock analysis (e.g. `bdo`, `sm`, `mbt`, `jfc`, `psei`) |
+| `/stock/[ticker]` | Stock analysis: signal + entry/exit, company stats, fundamentals, forecasts (e.g. `bdo`, `sm`, `mbt`, `jfc`, `psei`) |
+| `/login` | Access-gate sign-in — the only route not behind the gate itself |
 
 **Catalog:** all listed PSE equities in `data/pse-official-universe.json` (synced from PSE EDGE). **Demo analysis & forecasts:** ~30 blue chips + `PSEI.PS` in `src/lib/data/stock-seeds.ts`.
 
@@ -67,6 +84,10 @@ Keep ~2GB free disk space; corrupted `.next` caches can cause 500 errors.
 | `GET /api/stocks/[ticker]/forecast?horizon=7d&model=lstm` | Forecast for ticker |
 | `GET /api/forecasts` | All forecasts list |
 | `GET /api/market/quotes?symbols=BDO.PS,SM.PS` | Latest EOD quotes (DB or snapshot) |
+| `GET /api/market/signals?symbols=BDO.PS,SM.PS` | Batched consensus signal per ticker |
+| `GET /api/watchlist/backtest?tickers=...` | Portfolio-level model-fit backtest |
+| `GET /api/watchlist/signal-backtest?tickers=...` | Portfolio-level point-in-time signal backtest |
+| `POST /api/auth/login` / `POST /api/auth/logout` | Access-gate session endpoints (see [Access gate](#access-gate)) |
 
 Rate limited (120 req/min per IP). Ticker params validated with Zod.
 
@@ -150,6 +171,22 @@ cd services/forecast
 python3 -m forecast.lstm --closes '[100,101,102,103]' --horizon 7
 ```
 
+## Signal, backtest & journal
+
+- **Consensus signal** ([`src/lib/signal/`](src/lib/signal/)): Buy/Hold/Avoid per stock, combining the three baseline forecast models weighted by each model's own backtested directional accuracy — LSTM is excluded (it has no backtested accuracy to weight it by, consistent with it already being demoted from "recommended" elsewhere). Entry price, stop-loss, and target are derived separately from ATR and support/resistance, not mixed into the direction call.
+- **Backtest**: `npm run backtest:signal` walks the consensus signal back through history at each historical point in time (no lookahead — model weights are recomputed from only the data available as of that day) across the full listed universe. Run it before trusting the signal, or after changing its thresholds. The Signal Backtest card on `/watchlist` runs the same logic scoped to your watchlist.
+- **Journal** (`/journal`): log a signal call from any stock page; entries auto-resolve against real closing prices once their horizon passes. Fully localStorage-based, like the watchlist.
+- **Dashboard digest**: the "What's New" card on `/dashboard` surfaces watchlist signal changes and newly-resolved journal entries since your last visit.
+
+## Fundamentals & company stats
+
+Two tiers, both scraped from PSE EDGE HTML — no PDF parsing (see the scripts' file headers for the exact endpoints used):
+
+- **Company stats** (`company_stats_latest`): market cap, outstanding shares, free float %, foreign ownership limit, par value — pulled from the same `stockdataList` endpoint already used for live quotes. `npm run ingest:company-stats`.
+- **Fundamentals** (`fundamentals_latest`): P/E, P/B, EPS (trailing 12mo), revenue and net income (year-to-date), book value/share, dividend yield (trailing 12mo) — parsed from the structured HTML cover sheet PSE EDGE renders for each company's latest SEC Form 17-Q filing. `npm run ingest:fundamentals`.
+
+Both are manual/occasional ingests, not scheduled crons — this data moves slowly (quarterly filings, rarely-changing share counts). P/E, P/B, and dividend yield are computed at render time against the current price rather than stored, so they're never stale between ingest runs.
+
 ## Scripts
 
 | Command | Description |
@@ -164,6 +201,9 @@ python3 -m forecast.lstm --closes '[100,101,102,103]' --horizon 7
 | `npm run ingest:forecasts` | Baseline forecasts + metrics → Postgres |
 | `npm run ingest:forecasts:snapshot` | Forecasts ingest + publish to Supabase Storage (`SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` required) |
 | `npm run ingest:forecasts:lstm` | Optional LSTM forecasts via Python |
+| `npm run ingest:company-stats` | Market cap, free float, etc. → Postgres (manual/occasional) |
+| `npm run ingest:fundamentals` | P/E-relevant fundamentals → Postgres (manual/occasional) |
+| `npm run backtest:signal` | Full-universe point-in-time consensus-signal backtest report |
 | `npm run ingest:quotes:snapshot` | Quotes ingest + write snapshot file |
 | `npm run setup:market-data` | Same as snapshot ingest (static/Vercel refresh) |
 | `npm run validate:data` | Validate universe JSON (+ snapshot) for CI |
@@ -183,10 +223,12 @@ Requires network access to `edge.pse.com.ph`. Commit updated `data/pse-official-
 
 ## Deploy
 
-- **Vercel:** `MARKET_DATA_SOURCE=static`, committed snapshot, no DB secrets.
+- **Vercel:** `MARKET_DATA_SOURCE=static` + committed snapshot for quotes/forecasts only, no DB secrets — or `MARKET_DATA_SOURCE=db` + `DATABASE_URL` for the full feature set (signal, fundamentals, and company stats all need a live DB; they have no static fallback). Current production runs `db` mode.
 - **DSS:** `MARKET_DATA_SOURCE=db`, readonly `DATABASE_URL`, cron with writer creds in `.env.ingest`.
 
-Rotate Supabase passwords if credentials were ever exposed. Never commit `.env` or `.env.ingest`.
+**Either target:** set `APP_PASSWORD` + `AUTH_SECRET` before the deployment is reachable by anyone but you — see [Access gate](#access-gate). The gate fails open without them.
+
+Rotate Supabase passwords if credentials were ever exposed. Never commit `.env`, `.env.local`, or `.env.ingest`.
 
 ## Error monitoring
 
