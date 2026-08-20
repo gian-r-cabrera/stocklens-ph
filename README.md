@@ -126,6 +126,7 @@ Sources: **PSE EDGE** (default). Fallback: `npm run ingest:quotes -- --source=ya
 | Schedule (Manila) | Command |
 |-------------------|---------|
 | Mon–Fri ~18:00 | `.github/workflows/market-live-refresh.yml` (GitHub Actions, quotes → bars against the live DB) — `db/cron.example.sh` covers the same sequence if run on a VM, but its deployment was never confirmed running |
+| Mon–Fri every 10 min, 9:30–15:30 | `market-intraday-refresh.yml` (6 fixed symbols only — powers the dashboard's "Live" indicator; see [`db/INGEST.md`](db/INGEST.md#intraday-dashboard-refresh)) |
 | Mon–Fri ~19:30 | `market-forecasts-snapshot.yml` (forecasts, reads the bars refreshed above) |
 | Mon–Fri ~20:00 | `signal-notify.yml` (checks `data/notify-watchlist.json` for signal changes, files a GitHub issue if any) |
 | Sunday 06:00 | `npm run sync:pse` → commit JSON if listings changed |

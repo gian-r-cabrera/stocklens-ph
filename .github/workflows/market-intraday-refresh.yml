@@ -1,0 +1,64 @@
+# Refreshes market_quotes_latest for 6 fixed symbols (PSEI, BDO, JFC, ALI,
+# TEL, SMPH — src/lib/data/dashboard-featured.ts) during PSE trading hours,
+# so the dashboard's already-built "Live" indicator and 60s poll
+# (src/components/dashboard/market-overview.tsx) actually show fresh
+# intraday prices instead of silently re-polling the same once-daily EOD
+# row all day.
+#
+# This was designed to run on the DSS VM's cron (db/cron.example.sh,
+# every 2 min) but — same story as market-live-refresh.yml — that
+# deployment was never confirmed running, so it's never actually been live.
+# GitHub Actions can't reliably do 2-minute schedules (frequent short
+# intervals get delayed under load), so this runs every 10 minutes instead
+# across a coarse UTC hour window; --respect-market-hours makes the
+# underlying script a no-op for any run that lands outside the real
+# 9:30–15:30 Manila session (see src/lib/market/pse-session.ts) — same
+# "coarse cron window, precise script-level check" pattern already used by
+# the DSS example.
+#
+# Deliberately scoped to 6 symbols, not the full ~284-symbol universe — see
+# db/INGEST.md for why polling everything this often would risk the ingest
+# IP getting throttled or blocked by PSE EDGE.
+
+name: Market intraday refresh
+
+on:
+  schedule:
+    - cron: "*/10 1-7 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Check DATABASE_URL is configured
+        id: has-secrets
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::DATABASE_URL not set — skipping intraday refresh"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - run: npm run ingest:quotes -- --symbols=PSEI,BDO,JFC,ALI,TEL,SMPH --respect-market-hours
+        if: steps.has-secrets.outputs.configured == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: File issue on failure
+        if: failure()
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/ingest-failure-issue.md
+          search_existing: open
+          update_existing: true
