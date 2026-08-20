@@ -24,6 +24,16 @@ test.describe("accessibility", () => {
       page,
     }) => {
       await page.goto(path);
+      // Every (app) route mounts through a 200ms fade-in entrance animation
+      // (src/app/(app)/template.tsx). Scanning mid-fade briefly measures
+      // text at reduced effective opacity/contrast — a transient rendering
+      // artifact, not the page's real (fully compliant) steady-state
+      // color — so wait for the animation to settle first. No-op on
+      // routes without the wrapper (e.g. "/").
+      const animatedRoot = page.locator(".animate-in.fade-in").first();
+      if (await animatedRoot.count()) {
+        await expect(animatedRoot).toHaveCSS("opacity", "1");
+      }
       const results = await new AxeBuilder({ page })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
         .analyze();
