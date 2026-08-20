@@ -54,8 +54,9 @@ test.describe("technical chart panel toggles", () => {
     const volumeBtn = page.getByRole("button", { name: "Volume", exact: true });
     const rsiBtn = page.getByRole("button", { name: "RSI", exact: true });
     const macdBtn = page.getByRole("button", { name: "MACD", exact: true });
+    const atrBtn = page.getByRole("button", { name: "ATR", exact: true });
 
-    for (const btn of [priceBtn, volumeBtn, rsiBtn, macdBtn]) {
+    for (const btn of [priceBtn, volumeBtn, rsiBtn, macdBtn, atrBtn]) {
       await expect(btn).toHaveAttribute("aria-pressed", "true");
     }
 
@@ -65,8 +66,10 @@ test.describe("technical chart panel toggles", () => {
     // Hide everything except Price + SMA.
     await rsiBtn.click();
     await macdBtn.click();
+    await atrBtn.click();
     await expect(rsiBtn).toHaveAttribute("aria-pressed", "false");
     await expect(macdBtn).toHaveAttribute("aria-pressed", "false");
+    await expect(atrBtn).toHaveAttribute("aria-pressed", "false");
     await expect(priceBtn).toHaveAttribute("aria-pressed", "true");
 
     // The sole remaining panel can't be toggled off.
