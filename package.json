@@ -21,6 +21,7 @@
     "ingest:fundamentals": "tsx scripts/ingest-fundamentals.ts",
     "backtest:signal": "tsx scripts/backtest-signal.ts",
     "backtest:signal:seeds": "tsx scripts/backtest-signal.ts -- --seeds",
+    "check:signal-changes": "tsx scripts/check-signal-changes.ts",
     "setup:market-data": "tsx scripts/ingest-market-quotes.ts -- --write-snapshot",
     "validate:data": "tsx scripts/validate-pse-universe.ts",
     "health:market": "tsx scripts/health-market.ts",

@@ -1,0 +1,74 @@
+# Checks the consensus signal for a manually-maintained ticker list
+# (data/notify-watchlist.json) against the last-known signal per ticker
+# (data/notify-signal-state.json, committed back each run so the diff
+# persists across workflow runs) and files a GitHub issue when one changes.
+#
+# Scheduled after market-live-refresh.yml and market-forecasts-snapshot.yml
+# so the signal is computed from same-day bars, not stale ones.
+#
+# The in-app watchlist lives only in the browser's localStorage — nothing
+# server-side can read it — so data/notify-watchlist.json is a separate,
+# manually-maintained list. Edit it to match your real watchlist.
+
+name: Signal change notify
+
+on:
+  schedule:
+    - cron: "0 12 * * 1-5"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - name: Check DATABASE_URL is configured
+        id: has-secrets
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::DATABASE_URL not set — skipping signal check"
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Check signal changes
+        id: check
+        if: steps.has-secrets.outputs.configured == 'true'
+        run: npm run check:signal-changes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      - name: Commit updated signal state
+        if: steps.has-secrets.outputs.configured == 'true'
+        run: |
+          git diff --quiet data/notify-signal-state.json && echo "No state changes" || {
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/notify-signal-state.json
+            git commit -m "chore: update signal notify state"
+            git push
+          }
+      - name: File issue for signal changes
+        if: steps.has-secrets.outputs.configured == 'true' && steps.check.outputs.has_changes == 'true'
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY: ${{ steps.check.outputs.summary }}
+        with:
+          filename: .github/signal-change-issue.md
+      - name: File issue on failure
+        if: failure()
+        uses: JasonEtco/create-an-issue@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/ingest-failure-issue.md
+          search_existing: open
+          update_existing: true

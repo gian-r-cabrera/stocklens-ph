@@ -127,6 +127,7 @@ Sources: **PSE EDGE** (default). Fallback: `npm run ingest:quotes -- --source=ya
 |-------------------|---------|
 | Mon–Fri ~18:00 | `.github/workflows/market-live-refresh.yml` (GitHub Actions, quotes → bars against the live DB) — `db/cron.example.sh` covers the same sequence if run on a VM, but its deployment was never confirmed running |
 | Mon–Fri ~19:30 | `market-forecasts-snapshot.yml` (forecasts, reads the bars refreshed above) |
+| Mon–Fri ~20:00 | `signal-notify.yml` (checks `data/notify-watchlist.json` for signal changes, files a GitHub issue if any) |
 | Sunday 06:00 | `npm run sync:pse` → commit JSON if listings changed |
 
 **Health checks** (Supabase SQL):
@@ -176,7 +177,8 @@ python3 -m forecast.lstm --closes '[100,101,102,103]' --horizon 7
 - **Consensus signal** ([`src/lib/signal/`](src/lib/signal/)): Buy/Hold/Avoid per stock, combining the three baseline forecast models weighted by each model's own backtested directional accuracy — LSTM is excluded (it has no backtested accuracy to weight it by, consistent with it already being demoted from "recommended" elsewhere). Entry price, stop-loss, and target are derived separately from ATR and support/resistance, not mixed into the direction call.
 - **Backtest**: `npm run backtest:signal` walks the consensus signal back through history at each historical point in time (no lookahead — model weights are recomputed from only the data available as of that day) across the full listed universe. Run it before trusting the signal, or after changing its thresholds. The Signal Backtest card on `/watchlist` runs the same logic scoped to your watchlist.
 - **Journal** (`/journal`): log a signal call from any stock page; entries auto-resolve against real closing prices once their horizon passes. Fully localStorage-based, like the watchlist.
-- **Dashboard digest**: the "What's New" card on `/dashboard` surfaces watchlist signal changes and newly-resolved journal entries since your last visit.
+- **Dashboard digest**: the "What's New" card on `/dashboard` surfaces watchlist signal changes and newly-resolved journal entries since your last visit — but only when you open the app.
+- **Signal-change notifications** (proactive, outside the app): the in-app watchlist lives only in browser localStorage, so a scheduled job has no way to read it. `data/notify-watchlist.json` is a separate, manually-maintained ticker list; `.github/workflows/signal-notify.yml` checks it daily (`npm run check:signal-changes`) against the last-known signal (`data/notify-signal-state.json`, committed back each run) and files a GitHub issue when one changes. Keep the two ticker lists in sync yourself — there's no automatic link between them.
 
 ## Fundamentals & company stats
 

@@ -1,0 +1,4 @@
+{
+  "_comment": "Tickers checked by the scheduled signal-change notifier (npm run check:signal-changes / .github/workflows/signal-notify.yml). This is a separate, manually-maintained list — the in-app watchlist lives only in your browser's localStorage, which a GitHub Action has no way to read. Edit this file to match your real watchlist.",
+  "tickers": ["BDO.PS", "JFC.PS", "ALI.PS", "SMPH.PS"]
+}
