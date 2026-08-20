@@ -18,5 +18,10 @@
     "action": "buy",
     "confidence": 31,
     "asOf": "2026-08-20"
+  },
+  "SM.PS": {
+    "action": "hold",
+    "confidence": 28,
+    "asOf": "2026-08-20"
   }
 }
