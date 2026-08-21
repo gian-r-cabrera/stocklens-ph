@@ -4,6 +4,14 @@ Educational Philippine stock analytics dashboard: experimental AI forecasts, a b
 
 Live at [stocklens-ph.vercel.app](https://stocklens-ph.vercel.app) (password-gated — see [Access gate](#access-gate)).
 
+## Screenshots
+
+**Dashboard** — market overview, featured stocks, model trend signals
+![Dashboard](docs/screenshots/dashboard.png)
+
+**All Stocks** — browse all 283 PSE-listed equities by sector, with live prices and P/E · yield
+![All Stocks](docs/screenshots/all-stocks.png)
+
 ## Disclaimer
 
 **For educational purposes only.** Forecasts are experimental and not financial advice. See `/terms` for full terms.
